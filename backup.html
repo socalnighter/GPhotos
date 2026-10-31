@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photos Backup to Folder</title>
+<style>
+  :root { --bg:#fff; --fg:#1f2328; --muted:#6b7280; --line:#d8dce1; --accent:#1a73e8; --card:#f6f8fa; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16181d; --fg:#e6e8eb; --muted:#9aa3ad; --line:#2d3139; --accent:#6ea8fe; --card:#1d2027; }
+  }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui,sans-serif; }
+  main { max-width:680px; margin:0 auto; padding:28px 16px 60px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  p.sub { color:var(--muted); margin:0 0 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:14px; }
+  .card h2 { font-size:15px; margin:0 0 8px; }
+  ol { margin:0; padding-left:20px; } li { margin:4px 0; }
+  button { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--fg); cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:disabled { opacity:.45; cursor:default; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0; }
+  label { color:var(--muted); }
+  input[type=number] { width:80px; padding:5px 8px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--fg); }
+  #folder { color:var(--muted); }
+  #stats { font-variant-numeric:tabular-nums; font-weight:600; }
+  #log { font:12px/1.5 ui-monospace,monospace; color:var(--muted); white-space:pre-wrap; max-height:220px; overflow:auto; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Photos Backup to Folder</h1>
+  <p class="sub">Saves your Google Photos into <b>Year / Month</b> folders on a drive you pick.</p>
+
+  <div class="card">
+    <h2>Before you start</h2>
+    <ol>
+      <li>On the memory stick, create an empty folder (for example <b>PhotosBackup</b>). Chrome won't let you pick a drive's top level.</li>
+      <li>Open <b>photos.google.com</b> in another tab and make sure you're signed in on the main Photos view.</li>
+      <li>Keep both windows open until the backup finishes. The extension keeps the screen awake, but closing the laptop lid or locking the Mac by hand (Ctrl+Cmd+Q) still pauses it.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Backup</h2>
+    <div class="row">
+      <button id="choose">1. Choose folder on memory stick</button>
+      <span id="folder">No folder chosen</span>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="skipVideos"> Skip videos</label>
+      <label>Pause between files (ms) <input type="number" id="delay" value="0" min="0" step="100"></label>
+      <label>Parallel downloads <input type="number" id="conc" value="6" min="1" max="16"></label>
+      <label>Scroll wait (ms) <input type="number" id="scrollDelay" value="900" min="400" step="100"></label>
+    </div>
+    <div class="row">
+      <button id="start" class="primary" disabled>2. Start backup</button>
+      <button id="stop" disabled>Stop</button>
+    </div>
+    <div class="row"><span id="stats">Idle</span></div>
+    <div class="row"><span id="diag" style="color:var(--muted);font-size:13px"></span></div>
+    <div id="log"></div>
+  </div>
+</main>
+<script src="exif.js"></script>
+<script src="backup.js"></script>
+</body>
+</html>
