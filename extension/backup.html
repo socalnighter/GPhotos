@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPhotos Backup</title>
+<link rel="icon" href="icons/icon32.png">
+<style>
+  :root { --bg:#fff; --fg:#1f2328; --muted:#6b7280; --line:#d8dce1; --accent:#2563eb; --card:#f6f8fa; --warn:#b45309; --bad:#b91c1c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16181d; --fg:#e6e8eb; --muted:#9aa3ad; --line:#2d3139; --accent:#6ea8fe; --card:#1d2027; --warn:#fbbf24; --bad:#f87171; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui,sans-serif; }
+  main { max-width:680px; margin:0 auto; padding:24px 16px 60px; }
+  header { display:flex; gap:12px; align-items:center; margin-bottom:6px; }
+  header img { width:44px; height:44px; border-radius:10px; }
+  h1 { font-size:21px; margin:0; line-height:1.2; }
+  p.sub { color:var(--muted); margin:2px 0 18px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:14px; }
+  .card h2 { font-size:15px; margin:0 0 8px; }
+  ol { margin:0; padding-left:20px; } li { margin:4px 0; }
+  button { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--fg); cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:disabled { opacity:.45; cursor:default; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0; }
+  label { color:var(--muted); }
+  label.block { display:block; margin-top:10px; font-size:13px; }
+  input[type=number] { width:76px; }
+  input[type=number], input[type=text], select {
+    padding:6px 8px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--fg); font:inherit; }
+  input[type=text], select { width:100%; margin-top:4px; }
+  input[type=text] { font-family:ui-monospace,monospace; font-size:13px; }
+  #folder { color:var(--muted); word-break:break-all; }
+  #preview { font:13px/1.5 ui-monospace,monospace; color:var(--fg); margin-top:12px; padding:8px 10px; background:var(--bg); border:1px dashed var(--line); border-radius:6px; word-break:break-all; }
+  #tplError { color:var(--bad); font-size:13px; margin-top:6px; min-height:0; }
+  details { margin-top:10px; font-size:13px; color:var(--muted); }
+  details table { border-collapse:collapse; margin-top:6px; }
+  details td { padding:2px 12px 2px 0; vertical-align:top; }
+  details code { color:var(--fg); }
+  #stats { font-variant-numeric:tabular-nums; font-weight:600; }
+  #diag { color:var(--muted); font-size:13px; }
+  #log { font:12px/1.5 ui-monospace,monospace; color:var(--muted); white-space:pre-wrap; max-height:220px; overflow:auto; }
+  .note { font-size:13px; color:var(--muted); margin:8px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="icons/icon128.png" alt="">
+    <div><h1>GPhotos Backup</h1></div>
+  </header>
+  <p class="sub">Saves your Google Photos library into a folder on your computer or an external drive, organized the way you like.</p>
+
+  <div class="card">
+    <h2>Before you start</h2>
+    <ol>
+      <li>Create an empty folder where the backup should go (for example <b>PhotosBackup</b>). It can be on your computer or on an external drive. Chrome won't let you pick the top level of a drive, so make a folder inside it.</li>
+      <li>Open <b>photos.google.com</b> in another window and make sure you're signed in on the main Photos view. Keep it visible while the backup runs.</li>
+      <li>Keep both windows open until it finishes. The extension keeps the screen awake, but closing the laptop lid or locking the computer by hand will still pause it.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>1. Backup folder</h2>
+    <div class="row">
+      <button id="choose">Choose backup folder</button>
+      <span id="folder">No folder chosen</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. How should it be organized?</h2>
+    <label class="block">Folder structure
+      <select id="folderPreset" class="cfg"></select>
+    </label>
+    <input type="text" id="folderTpl" class="cfg" spellcheck="false" aria-label="Folder pattern" placeholder="Folder pattern, e.g. {YYYY}/{MM} - {MMMM}">
+    <label class="block">File names
+      <select id="filePreset" class="cfg"></select>
+    </label>
+    <input type="text" id="fileTpl" class="cfg" spellcheck="false" aria-label="File name pattern" placeholder="File name pattern, e.g. {name}">
+    <div id="tplError"></div>
+    <div id="preview"></div>
+    <details>
+      <summary>Build your own pattern</summary>
+      <p class="note">Type any mix of text and tokens. Use <code>/</code> to start a new folder level. Photos without a usable date go into an <b>Unknown date</b> folder when the folder pattern uses a date.</p>
+      <table id="tokenTable"></table>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>3. Options</h2>
+    <div class="row">
+      <label><input type="checkbox" id="skipVideos" class="cfg"> Skip videos</label>
+      <label>Parallel downloads <input type="number" id="conc" value="6" min="1" max="16"></label>
+      <label>Pause between files (ms) <input type="number" id="delay" value="0" min="0" step="100"></label>
+      <label>Scroll wait (ms) <input type="number" id="scrollDelay" class="cfg" value="500" min="300" step="100"></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>4. Run</h2>
+    <div class="row">
+      <button id="start" class="primary" disabled>Start backup</button>
+      <button id="pause" disabled>Pause</button>
+      <button id="stop" disabled>Stop</button>
+    </div>
+    <div class="row"><span id="stats">Idle</span></div>
+    <div class="row"><span id="diag"></span></div>
+    <div id="log"></div>
+    <p class="note">Pause holds the backup where it is and lets you resume without starting over. Stop ends the run; starting again later skips everything already saved.</p>
+  </div>
+</main>
+<script src="exif.js"></script>
+<script src="template.js"></script>
+<script src="backup.js"></script>
+</body>
+</html>
